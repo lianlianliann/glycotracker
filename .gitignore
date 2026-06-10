@@ -1,1 +1,16 @@
-node_modules/
+# --- Frontend (React/Vite) ---
+glycotracker-frontend/node_modules
+glycotracker-frontend/dist
+glycotracker-frontend/.env
+
+# --- Backend (C#/.NET) ---
+glycotracker-backend/bin/
+glycotracker-backend/obj/
+glycotracker-backend/.vs/
+glycotracker-backend/*.user
+glycotracker-backend/*.suo
+
+# --- General System/Editor Files ---
+.DS_Store
+.idea/
+*.log
