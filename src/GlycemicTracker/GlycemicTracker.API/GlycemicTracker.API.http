@@ -1,0 +1,6 @@
+@GlycemicTracker.API_HostAddress = http://localhost:5208
+
+GET {{GlycemicTracker.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
