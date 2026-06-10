@@ -83,11 +83,10 @@ GlycoTrack accounts for this. Every meal entry computes a **final Glycemic Load 
 
 | Name | Role |
 |---|---|
-| **Jayoma, Aira** | UI/UX Design — Figma mockups, component layout, traffic-light color system |
-| **Lasam, Vince Michael** | Frontend Development — React component architecture, food logger, real-time GL preview |
-| **Mercado, Jeff Petterson** | Backend Development — ASP.NET Core API, Prep-Modifier Algorithm engine, GL computation |
-| **Nicolas, John Rich** | Database Engineering — Supabase/PostgreSQL schema, EF Core migrations, RLS policies, CSV seeding |
-| **Paredes, Lian Luigi** | Full Stack Integration — Dashboard, analytics chart, daily GL aggregation, end-to-end testing |
+| **Lasam, Vince Michael** | Backend Development — ASP.NET Core API, Prep-Modifier Algorithm engine, GL computation |
+| **Mercado, Jeff Petterson** | Database Engineering — Supabase/PostgreSQL schema, EF Core migrations, RLS policies, CSV seeding |
+| **Nicolas, John Rich** | Backend Development — ASP.NET Core API, Prep-Modifier Algorithm engine, GL computation |
+| **Paredes, Lian Luigi** | UI/UX Design & Frontend Development — React component architecture, food logger, real-time GL preview |
 
 ---
 
