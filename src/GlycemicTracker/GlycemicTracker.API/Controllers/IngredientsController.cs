@@ -5,7 +5,7 @@ using GlycemicTracker.API.Data;
 namespace GlycemicTracker.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/ingredients")]
 public class IngredientsController : ControllerBase
 {
     private readonly AppDbContext _context;

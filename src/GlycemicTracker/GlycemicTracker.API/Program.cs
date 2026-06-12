@@ -1,4 +1,5 @@
 using GlycemicTracker.API.Data;
+using GlycemicTracker.API.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,7 +13,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection")
     )
 );
+builder.Services.AddScoped<GlycemicService>();
 
+builder.Services.AddSwaggerGen(options =>
+{
+    options.MapType<DateOnly>(() => new Microsoft.OpenApi.Models.OpenApiSchema
+    {
+        Type = "string",
+        Format = "date"
+    });
+});
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

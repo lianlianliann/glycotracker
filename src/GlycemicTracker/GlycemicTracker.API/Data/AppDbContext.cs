@@ -13,6 +13,8 @@ public class AppDbContext : DbContext
     public DbSet<UserProfile> UserProfiles { get; set; }
     public DbSet<MealEntry> MealEntries { get; set; }
 
+    public DbSet<DailyGlSummary> DailyGlSummaries { get; set; }
+
     protected override void OnModelCreating(ModelBuilder mb)
     {
         mb.Entity<Ingredient>(e => {
@@ -72,6 +74,14 @@ public class AppDbContext : DbContext
              .WithMany(p => p.MealEntries)
              .HasForeignKey(m => m.PrepMethodId);
             e.HasIndex(m => new { m.UserId, m.LoggedAt });
+        });
+
+        mb.Entity<DailyGlSummary>(e => {
+            e.ToTable("daily_gl_summaries");
+            e.HasKey(s => new { s.UserId, s.SummaryDate });
+            e.Property(s => s.UserId).HasColumnName("user_id");
+            e.Property(s => s.SummaryDate).HasColumnName("summary_date");
+            e.Property(s => s.TotalGl).HasColumnName("total_gl").HasPrecision(6, 2);
         });
     }
 }
