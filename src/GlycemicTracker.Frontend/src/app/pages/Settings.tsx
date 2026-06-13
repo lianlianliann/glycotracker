@@ -54,13 +54,11 @@ export function Settings() {
   const handleSaveProfile = (updated: ProfileData, recalculate: boolean) => {
     setProfile(updated);
     if (recalculate) {
-      // Simple recalc: adjust GL target based on condition
       const newGL = updated.condition === "General Health" ? 100
         : updated.condition === "Prediabetes" ? 80
         : updated.condition === "Type 1 Diabetes" ? 70
         : 60;
       setGlTarget(newGL);
-      // Rough calorie adjustment by weight
       const w = Number(updated.weight) || 72;
       const mult = updated.activity === "Sedentary" ? 1.2
         : updated.activity === "Lightly Active" ? 1.375
@@ -68,6 +66,49 @@ export function Settings() {
         : 1.725;
       setCalorieTarget(Math.round(w * 25 * mult));
       setProteinTarget(Math.round(w * (updated.condition === "General Health" ? 0.8 : updated.condition === "Prediabetes" ? 1.0 : 1.2)));
+    }
+  };
+
+  // Export meal logs as CSV
+  const handleExportData = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:7214/api/meal-entries?userId=${profile.email}`
+      );
+      const entries = await response.json();
+
+      const csv = [
+        ["Date", "Ingredient", "Prep Method", "Grams", "Net Carbs", "Modified GI", "Final GL", "Meal Type"].join(","),
+        ...entries.map((e: any) =>
+          [e.loggedAt, e.ingredientName, e.prepMethodName, e.gramsConsumed,
+           e.netCarbs, e.modifiedGI, e.finalGL, e.mealType].join(",")
+        )
+      ].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = "meal-logs.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Failed to export data. Make sure the API is running.");
+    }
+  };
+
+  // Timezone — defaulting to Asia/Manila for Philippine users
+  const handleSaveTimezone = () => {
+    alert("Timezone is set to Asia/Manila by default for Philippine users.");
+  };
+
+  // Delete account
+  const handleDeleteAccount = () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete your account? This cannot be undone."
+    );
+    if (confirmed) {
+      alert("Account deletion requires Supabase Auth admin — contact your backend.");
     }
   };
 
@@ -157,27 +198,59 @@ export function Settings() {
       {/* ── Account ──────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-2 mb-4" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}>
         <h2 className="font-semibold px-4 pt-3 pb-2" style={{ color: "#1C1C1C" }}>Account</h2>
-        {[
-          { icon: Key, label: "Change password", desc: null },
-          { icon: Download, label: "Export my data", desc: "Download all meal logs as CSV" },
-          { icon: Globe, label: "Timezone", desc: "Asia/Manila" },
-        ].map(({ icon: Icon, label, desc }) => (
-          <button
-            key={label}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-gray-50 text-left border-b"
-            style={{ borderColor: "#F5F2ED" }}
-          >
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#EDE8DF" }}>
-              <Icon size={15} style={{ color: "#6B6B6B" }} />
-            </div>
-            <div className="flex-1">
-              <div className="text-sm font-medium" style={{ color: "#1C1C1C" }}>{label}</div>
-              {desc && <div className="text-xs" style={{ color: "#6B6B6B" }}>{desc}</div>}
-            </div>
-            <ChevronRight size={15} style={{ color: "#6B6B6B" }} />
-          </button>
-        ))}
-        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors hover:bg-red-50">
+
+        {/* Change Password */}
+        <button
+          onClick={() => alert("Change password: feature uses Supabase Auth — coming soon.")}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-gray-50 text-left border-b"
+          style={{ borderColor: "#F5F2ED" }}
+        >
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#EDE8DF" }}>
+            <Key size={15} style={{ color: "#6B6B6B" }} />
+          </div>
+          <div className="flex-1">
+            <div className="text-sm font-medium" style={{ color: "#1C1C1C" }}>Change password</div>
+          </div>
+          <ChevronRight size={15} style={{ color: "#6B6B6B" }} />
+        </button>
+
+        {/* Export My Data */}
+        <button
+          onClick={handleExportData}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-gray-50 text-left border-b"
+          style={{ borderColor: "#F5F2ED" }}
+        >
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#EDE8DF" }}>
+            <Download size={15} style={{ color: "#6B6B6B" }} />
+          </div>
+          <div className="flex-1">
+            <div className="text-sm font-medium" style={{ color: "#1C1C1C" }}>Export my data</div>
+            <div className="text-xs" style={{ color: "#6B6B6B" }}>Download all meal logs as CSV</div>
+          </div>
+          <ChevronRight size={15} style={{ color: "#6B6B6B" }} />
+        </button>
+
+        {/* Timezone */}
+        <button
+          onClick={handleSaveTimezone}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-gray-50 text-left border-b"
+          style={{ borderColor: "#F5F2ED" }}
+        >
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#EDE8DF" }}>
+            <Globe size={15} style={{ color: "#6B6B6B" }} />
+          </div>
+          <div className="flex-1">
+            <div className="text-sm font-medium" style={{ color: "#1C1C1C" }}>Timezone</div>
+            <div className="text-xs" style={{ color: "#6B6B6B" }}>Asia/Manila</div>
+          </div>
+          <ChevronRight size={15} style={{ color: "#6B6B6B" }} />
+        </button>
+
+        {/* Delete Account */}
+        <button
+          onClick={handleDeleteAccount}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors hover:bg-red-50"
+        >
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#FAEAE3" }}>
             <Trash2 size={15} style={{ color: "#C4673A" }} />
           </div>
