@@ -102,4 +102,38 @@ public class GlycemicService
 
         if (summary.TotalGl < 0) summary.TotalGl = 0;
     }
+
+    public async Task<List<DailyGlSummary>> GetWeeklySummaryAsync(Guid userId)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var sevenDaysAgo = today.AddDays(-6); // today + 6 past days = 7 total
+
+        return await _context.DailyGlSummaries
+            .Where(s => s.UserId == userId
+                     && s.SummaryDate >= sevenDaysAgo
+                     && s.SummaryDate <= today)
+            .OrderBy(s => s.SummaryDate)
+            .ToListAsync();
+    }
+
+    public GlPreviewResult PreviewGL(GlPreviewDto dto)
+    {
+        var netCarbsPer100g = dto.CarbsPer100g - dto.FiberPer100g;
+        var netCarbs = (netCarbsPer100g / 100m) * dto.GramsConsumed;
+        var modifiedGI = dto.BaseGI * dto.GiMultiplier;
+        var finalGL = (modifiedGI * netCarbs) / 100m;
+
+        return new GlPreviewResult
+        {
+            NetCarbs = Math.Round(netCarbs, 2),
+            ModifiedGI = Math.Round(modifiedGI, 2),
+            FinalGL = Math.Round(finalGL, 2),
+            GlLevel = finalGL switch
+            {
+                <= 10 => "Low",
+                <= 20 => "Medium",
+                _ => "High"
+            }
+        };
+    }
 }
