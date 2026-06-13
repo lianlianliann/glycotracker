@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.37314.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GlycemicTracker.API", "GlycemicTracker.API\GlycemicTracker.API.csproj", "{914AE857-E664-4108-864F-E782289AC4FB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GlycemicTracker.Tests", "GlycemicTracker.Tests\GlycemicTracker.Tests.csproj", "{539B7471-9765-408A-8214-1C69A569F4C7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{914AE857-E664-4108-864F-E782289AC4FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{914AE857-E664-4108-864F-E782289AC4FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{914AE857-E664-4108-864F-E782289AC4FB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{539B7471-9765-408A-8214-1C69A569F4C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{539B7471-9765-408A-8214-1C69A569F4C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{539B7471-9765-408A-8214-1C69A569F4C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{539B7471-9765-408A-8214-1C69A569F4C7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
