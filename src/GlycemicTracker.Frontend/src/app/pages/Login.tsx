@@ -33,6 +33,21 @@ export function Login() {
       return;
     }
 
+    // Check if this user already completed onboarding (has a user_profiles row)
+    try {
+      const API = import.meta.env.VITE_API_URL;
+      const res = await fetch(`${API}/api/user-profile/${data.user.id}`);
+
+      if (res.status === 404) {
+        // Auth account exists but profile setup was never completed
+        navigate("/onboarding");
+        return;
+      }
+    } catch {
+      // If the profile check itself fails (network issue), don't block login —
+      // fall through to dashboard, which can retry/show its own error state.
+    }
+
     navigate("/dashboard");
   };
 
