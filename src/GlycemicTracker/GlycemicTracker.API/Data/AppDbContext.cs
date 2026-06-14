@@ -13,6 +13,8 @@ public class AppDbContext : DbContext
     public DbSet<UserProfile> UserProfiles { get; set; }
     public DbSet<MealEntry> MealEntries { get; set; }
 
+    public DbSet<DailyGlSummary> DailyGlSummaries { get; set; }
+
     protected override void OnModelCreating(ModelBuilder mb)
     {
         mb.Entity<Ingredient>(e => {
@@ -65,6 +67,9 @@ public class AppDbContext : DbContext
             e.Property(m => m.MealType).HasColumnName("meal_type");
             e.Property(m => m.LoggedAt).HasColumnName("logged_at");
             e.Property(m => m.Notes).HasColumnName("notes");
+            e.Property(m => m.CaloriesConsumed).HasColumnName("calories_consumed").HasPrecision(7, 2);
+            e.Property(m => m.ProteinConsumed).HasColumnName("protein_consumed").HasPrecision(6, 2);
+            e.Property(m => m.FatConsumed).HasColumnName("fat_consumed").HasPrecision(6, 2);
             e.HasOne(m => m.Ingredient)
              .WithMany(i => i.MealEntries)
              .HasForeignKey(m => m.IngredientId);
@@ -72,6 +77,17 @@ public class AppDbContext : DbContext
              .WithMany(p => p.MealEntries)
              .HasForeignKey(m => m.PrepMethodId);
             e.HasIndex(m => new { m.UserId, m.LoggedAt });
+        });
+
+        mb.Entity<DailyGlSummary>(e => {
+            e.ToTable("daily_gl_summaries");
+            e.HasKey(s => s.SummaryId);
+            e.Property(s => s.SummaryId).HasColumnName("summary_id").HasDefaultValueSql("gen_random_uuid()");
+            e.Property(s => s.UserId).HasColumnName("user_id");
+            e.Property(s => s.SummaryDate).HasColumnName("date");
+            e.Property(s => s.TotalGl).HasColumnName("total_gl").HasPrecision(6, 2);
+            e.Property(s => s.EntryCount).HasColumnName("entry_count");
+            e.HasIndex(s => new { s.UserId, s.SummaryDate }).IsUnique();
         });
     }
 }
