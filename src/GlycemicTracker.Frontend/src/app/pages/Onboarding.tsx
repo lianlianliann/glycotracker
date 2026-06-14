@@ -65,6 +65,7 @@ const HEALTH_CONDITIONS = [
   },
 ];
 
+// Maps onboarding condition labels to DB CHECK constraint values
 const CONDITION_TO_DIABETES_TYPE: Record<string, string> = {
   "General Health": "none",
   Prediabetes: "prediabetes",
@@ -110,7 +111,6 @@ function calcTargets(
         : condition === "Type 1 Diabetes"
           ? 70
           : 60;
-  // GI target: slightly higher than GL target as a daily GI reference
   const gi = Math.round(gl * 1.5);
   return { calories, protein, gl, gi };
 }
@@ -170,8 +170,14 @@ export function Onboarding() {
         return;
       }
 
-      const displayName = localStorage.getItem("glycotrack_display_name") ?? "";
+      // Display name: prefer value saved during Register, fallback to Supabase user metadata
+      const displayName =
+        localStorage.getItem("glycotrack_display_name") ??
+        (user.user_metadata?.display_name as string | undefined) ??
+        "";
+
       const diabetesType = CONDITION_TO_DIABETES_TYPE[condition] ?? "none";
+      const activityLevel = ACTIVITY_TO_DB_VALUE[activity] ?? activity;
       const API = import.meta.env.VITE_API_URL;
 
       const res = await fetch(`${API}/api/user-profile`, {
@@ -187,7 +193,7 @@ export function Onboarding() {
           diabetesType: diabetesType,
           height: Number(height),
           weight: Number(weight),
-          activityLevel: ACTIVITY_TO_DB_VALUE[activity] ?? activity,
+          activityLevel: activityLevel,
         }),
       });
 
