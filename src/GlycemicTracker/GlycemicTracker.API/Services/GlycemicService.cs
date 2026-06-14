@@ -62,21 +62,69 @@ public class GlycemicService
         await _context.SaveChangesAsync();
     }
 
-    public async Task<List<MealEntry>> GetTodayEntriesAsync(Guid userId, string timezone = "Asia/Manila")
+    public async Task<MealEntry> UpdateMealEntryAsync(Guid entryId, Guid userId, UpdateMealEntryDto dto)
     {
-        var tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
-        var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-        var todayStart = new DateTimeOffset(nowLocal.Date, tz.GetUtcOffset(nowLocal.Date));
-        var todayEnd = todayStart.AddDays(1);
+        var entry = await _context.MealEntries
+            .Include(e => e.Ingredient)
+            .Include(e => e.PrepMethod)
+            .FirstOrDefaultAsync(e => e.EntryId == entryId && e.UserId == userId)
+            ?? throw new ArgumentException("Entry not found or does not belong to user.");
+
+        var oldGl = entry.FinalGL;
+
+        if (dto.IngredientId is Guid ingredientId && ingredientId != entry.IngredientId)
+        {
+            var ingredient = await _context.Ingredients.FindAsync(ingredientId)
+                ?? throw new ArgumentException($"Ingredient {ingredientId} not found.");
+            entry.IngredientId = ingredientId;
+            entry.Ingredient = ingredient;
+        }
+
+        if (dto.PrepMethodId is short prepMethodId && prepMethodId != entry.PrepMethodId)
+        {
+            var prepMethod = await _context.PreparationMethods.FindAsync(prepMethodId)
+                ?? throw new ArgumentException($"Prep method {prepMethodId} not found.");
+            entry.PrepMethodId = prepMethodId;
+            entry.PrepMethod = prepMethod;
+        }
+
+        if (dto.GramsConsumed is decimal grams) entry.GramsConsumed = grams;
+        if (dto.MealType is not null) entry.MealType = dto.MealType;
+        if (dto.Notes is not null) entry.Notes = dto.Notes;
+
+        entry.ComputeGlycemicValues();
+
+        // Adjust today's running total by the difference between old and new GL
+        var glDelta = entry.FinalGL - oldGl;
+        if (glDelta != 0)
+            await AdjustDailyGlSummaryAsync(userId, glDelta);
+
+        await _context.SaveChangesAsync();
+
+        return entry;
+    }
+
+    private static readonly TimeSpan ManilaOffset = TimeSpan.FromHours(8);
+
+    public async Task<List<MealEntry>> GetEntriesByDateAsync(Guid userId, DateOnly date, string timezone = "Asia/Manila")
+    {
+        var dayStart = new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue), ManilaOffset);
+        var dayEnd = dayStart.AddDays(1);
 
         return await _context.MealEntries
             .Include(e => e.Ingredient)
             .Include(e => e.PrepMethod)
             .Where(e => e.UserId == userId
-                     && e.LoggedAt >= todayStart
-                     && e.LoggedAt < todayEnd)
+                     && e.LoggedAt >= dayStart
+                     && e.LoggedAt < dayEnd)
             .OrderBy(e => e.LoggedAt)
             .ToListAsync();
+    }
+
+    public async Task<List<MealEntry>> GetTodayEntriesAsync(Guid userId, string timezone = "Asia/Manila")
+    {
+        var nowLocal = DateTime.UtcNow + ManilaOffset;
+        return await GetEntriesByDateAsync(userId, DateOnly.FromDateTime(nowLocal), timezone);
     }
 
 
@@ -107,6 +155,30 @@ public class GlycemicService
         if (summary.EntryCount < 0) summary.EntryCount = 0;
     }
 
+    private async Task AdjustDailyGlSummaryAsync(Guid userId, decimal glDelta)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var summary = await _context.DailyGlSummaries
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.SummaryDate == today);
+
+        if (summary is null)
+        {
+            summary = new DailyGlSummary
+            {
+                SummaryId = Guid.NewGuid(),
+                UserId = userId,
+                SummaryDate = today,
+                TotalGl = 0,
+                EntryCount = 0,
+            };
+            _context.DailyGlSummaries.Add(summary);
+        }
+
+        summary.TotalGl += glDelta;
+        if (summary.TotalGl < 0) summary.TotalGl = 0;
+    }
+
     public async Task<List<DailyGlSummary>> GetWeeklySummaryAsync(Guid userId)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -120,21 +192,25 @@ public class GlycemicService
             .ToListAsync();
     }
 
-    public async Task<DailyGlSummary> GetTodaySummaryAsync(Guid userId)
+    public async Task<DailyGlSummary> GetSummaryByDateAsync(Guid userId, DateOnly date)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
         var summary = await _context.DailyGlSummaries
-            .FirstOrDefaultAsync(s => s.UserId == userId && s.SummaryDate == today);
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.SummaryDate == date);
 
         return summary ?? new DailyGlSummary
         {
             SummaryId = Guid.Empty,
             UserId = userId,
-            SummaryDate = today,
+            SummaryDate = date,
             TotalGl = 0,
             EntryCount = 0,
         };
+    }
+
+    public async Task<DailyGlSummary> GetTodaySummaryAsync(Guid userId)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        return await GetSummaryByDateAsync(userId, today);
     }
 
     public GlPreviewResult PreviewGL(GlPreviewDto dto)

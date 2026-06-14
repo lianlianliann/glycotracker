@@ -10,6 +10,15 @@ public class CreateMealEntryDto
     public string? Notes { get; set; }
 }
 
+public class UpdateMealEntryDto
+{
+    public Guid? IngredientId { get; set; }
+    public short? PrepMethodId { get; set; }
+    public decimal? GramsConsumed { get; set; }
+    public string? MealType { get; set; }
+    public string? Notes { get; set; }
+}
+
 public class CreateUserProfileDto
 {
     public Guid UserId { get; set; }

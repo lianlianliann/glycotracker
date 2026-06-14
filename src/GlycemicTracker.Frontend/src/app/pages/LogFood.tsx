@@ -110,6 +110,8 @@ export function LogFood() {
 
   const [prepMethods, setPrepMethods] = useState<PrepMethodUi[]>([]);
   const [selectedPrep, setSelectedPrep] = useState<PrepMethodUi | null>(null);
+  const [isPrepLoading, setIsPrepLoading] = useState(true);
+  const [prepError, setPrepError] = useState<string | null>(null);
 
   const [grams, setGrams] = useState(200);
   const [meal, setMeal] = useState("Lunch");
@@ -168,19 +170,30 @@ export function LogFood() {
       .then((data: ApiPrepMethod[]) => {
         if (cancelled) return;
         const merged: PrepMethodUi[] = data.map((m) => {
+          const methodName = m.methodName ?? "";
           const localMeta = PREP_METHOD_LIST.find(
-            (p) => p.label.toLowerCase() === m.methodName.toLowerCase(),
+            (p) => p.label.toLowerCase() === methodName.toLowerCase(),
           );
           return {
             ...m,
-            label: m.methodName,
+            methodName,
+            label: methodName,
             icon: localMeta?.icon ?? m.iconKey ?? "chef",
-            color: multColor(m.giMultiplier),
+            color: multColor(m.giMultiplier ?? 1),
           };
         });
         setPrepMethods(merged);
+        if (merged.length === 0) {
+          setPrepError("No preparation methods found in the database.");
+        }
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        if (!cancelled) setPrepError("Could not load preparation methods.");
+      })
+      .finally(() => {
+        if (!cancelled) setIsPrepLoading(false);
+      });
 
     return () => {
       cancelled = true;
@@ -238,7 +251,10 @@ export function LogFood() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        setLogError(body?.error ?? `Failed to log entry (${res.status}).`);
+        const message = body?.detail
+          ? `${body.error} (${body.detail})`
+          : (body?.error ?? `Failed to log entry (${res.status}).`);
+        setLogError(message);
         setIsLogging(false);
         return;
       }
@@ -615,46 +631,68 @@ export function LogFood() {
                 Preparation method
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {prepMethods.map((method) => (
-                <button
-                  key={method.prepMethodId}
-                  onClick={() => setSelectedPrep(method)}
-                  className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-all"
-                  style={{
-                    border:
-                      selectedPrep?.prepMethodId === method.prepMethodId
-                        ? `2px solid ${method.color}`
-                        : "1px solid #E2DDD6",
-                    backgroundColor:
-                      selectedPrep?.prepMethodId === method.prepMethodId
-                        ? method.color === "#C4673A"
-                          ? "#FAEAE3"
-                          : "#E8F5EC"
-                        : "white",
-                  }}
-                >
-                  <div style={{ color: method.color }}>
-                    <PrepIcon type={method.icon} />
-                  </div>
-                  <span
-                    className="text-xs font-medium"
-                    style={{ color: "#1C1C1C" }}
-                  >
-                    {method.label}
-                  </span>
-                  <span
-                    className="text-xs font-bold"
+
+            {isPrepLoading && (
+              <div
+                className="flex items-center gap-2 py-4 text-sm"
+                style={{ color: "#6B6B6B" }}
+              >
+                <Loader2 size={14} className="animate-spin" /> Loading
+                preparation methods...
+              </div>
+            )}
+
+            {!isPrepLoading && prepError && (
+              <div
+                className="px-4 py-3 rounded-lg text-sm mb-2"
+                style={{ backgroundColor: "#FEE2E2", color: "#991B1B" }}
+              >
+                {prepError}
+              </div>
+            )}
+
+            {!isPrepLoading && !prepError && (
+              <div className="grid grid-cols-3 gap-2">
+                {prepMethods.map((method) => (
+                  <button
+                    key={method.prepMethodId}
+                    onClick={() => setSelectedPrep(method)}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-all"
                     style={{
-                      color: method.color,
-                      fontVariantNumeric: "tabular-nums",
+                      border:
+                        selectedPrep?.prepMethodId === method.prepMethodId
+                          ? `2px solid ${method.color}`
+                          : "1px solid #E2DDD6",
+                      backgroundColor:
+                        selectedPrep?.prepMethodId === method.prepMethodId
+                          ? method.color === "#C4673A"
+                            ? "#FAEAE3"
+                            : "#E8F5EC"
+                          : "white",
                     }}
                   >
-                    ×{method.giMultiplier.toFixed(2)}
-                  </span>
-                </button>
-              ))}
-            </div>
+                    <div style={{ color: method.color }}>
+                      <PrepIcon type={method.icon} />
+                    </div>
+                    <span
+                      className="text-xs font-medium"
+                      style={{ color: "#1C1C1C" }}
+                    >
+                      {method.label}
+                    </span>
+                    <span
+                      className="text-xs font-bold"
+                      style={{
+                        color: method.color,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      ×{method.giMultiplier.toFixed(2)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Portion & meal type */}
