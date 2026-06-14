@@ -16,6 +16,13 @@ public class CreateUserProfileDto
     public string? DisplayName { get; set; }
     public decimal DailyGlTarget { get; set; } = 100;
     public string Timezone { get; set; } = "Asia/Manila";
+    public string? DiabetesType { get; set; }
+
+    // Added columns
+    public decimal? Height { get; set; }
+    public decimal? Weight { get; set; }
+    public string? ActivityLevel { get; set; }
+    public decimal? DailyGiTarget { get; set; }
 }
 
 public class UpdateUserProfileDto
@@ -23,6 +30,12 @@ public class UpdateUserProfileDto
     public string? DisplayName { get; set; }
     public decimal? DailyGlTarget { get; set; }
     public string? DiabetesType { get; set; }
+
+    // Added columns
+    public decimal? Height { get; set; }
+    public decimal? Weight { get; set; }
+    public string? ActivityLevel { get; set; }
+    public decimal? DailyGiTarget { get; set; }
 }
 
 public class GlPreviewDto

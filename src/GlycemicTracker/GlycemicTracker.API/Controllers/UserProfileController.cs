@@ -37,8 +37,13 @@ public class UserProfileController : ControllerBase
             UserId = dto.UserId,
             DisplayName = dto.DisplayName,
             DailyGlTarget = dto.DailyGlTarget,
+            DiabetesType = dto.DiabetesType,
             Timezone = dto.Timezone,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            Height = dto.Height,
+            Weight = dto.Weight,
+            ActivityLevel = dto.ActivityLevel,
+            DailyGiTarget = dto.DailyGiTarget
         };
 
         _context.UserProfiles.Add(profile);
@@ -56,6 +61,10 @@ public class UserProfileController : ControllerBase
         if (dto.DisplayName is not null) profile.DisplayName = dto.DisplayName;
         if (dto.DailyGlTarget is not null) profile.DailyGlTarget = dto.DailyGlTarget.Value;
         if (dto.DiabetesType is not null) profile.DiabetesType = dto.DiabetesType;
+        if (dto.Height is not null) profile.Height = dto.Height;
+        if (dto.Weight is not null) profile.Weight = dto.Weight;
+        if (dto.ActivityLevel is not null) profile.ActivityLevel = dto.ActivityLevel;
+        if (dto.DailyGiTarget is not null) profile.DailyGiTarget = dto.DailyGiTarget;
 
         await _context.SaveChangesAsync();
         return Ok(profile);

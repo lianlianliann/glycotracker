@@ -51,6 +51,11 @@ public class AppDbContext : DbContext
             e.Property(u => u.DiabetesType).HasColumnName("diabetes_type");
             e.Property(u => u.Timezone).HasColumnName("timezone");
             e.Property(u => u.CreatedAt).HasColumnName("created_at");
+            // Added columns
+            e.Property(u => u.Height).HasColumnName("height").HasPrecision(5, 1);
+            e.Property(u => u.Weight).HasColumnName("weight").HasPrecision(5, 1);
+            e.Property(u => u.ActivityLevel).HasColumnName("activity_level");
+            e.Property(u => u.DailyGiTarget).HasColumnName("daily_gi_target").HasPrecision(5, 1);
         });
 
         mb.Entity<MealEntry>(e => {

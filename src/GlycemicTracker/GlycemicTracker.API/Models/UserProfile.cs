@@ -8,4 +8,10 @@ public class UserProfile
 	public string? DiabetesType { get; set; }
 	public string Timezone { get; set; } = "Asia/Manila";
 	public DateTimeOffset CreatedAt { get; set; }
+
+	// Added columns
+	public decimal? Height { get; set; }
+	public decimal? Weight { get; set; }
+	public string? ActivityLevel { get; set; }
+	public decimal? DailyGiTarget { get; set; }
 }
