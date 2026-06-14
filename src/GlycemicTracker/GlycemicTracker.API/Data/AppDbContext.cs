@@ -51,11 +51,6 @@ public class AppDbContext : DbContext
             e.Property(u => u.DiabetesType).HasColumnName("diabetes_type");
             e.Property(u => u.Timezone).HasColumnName("timezone");
             e.Property(u => u.CreatedAt).HasColumnName("created_at");
-            // Added columns
-            e.Property(u => u.Height).HasColumnName("height").HasPrecision(5, 1);
-            e.Property(u => u.Weight).HasColumnName("weight").HasPrecision(5, 1);
-            e.Property(u => u.ActivityLevel).HasColumnName("activity_level");
-            e.Property(u => u.DailyGiTarget).HasColumnName("daily_gi_target").HasPrecision(5, 1);
         });
 
         mb.Entity<MealEntry>(e => {
@@ -72,6 +67,9 @@ public class AppDbContext : DbContext
             e.Property(m => m.MealType).HasColumnName("meal_type");
             e.Property(m => m.LoggedAt).HasColumnName("logged_at");
             e.Property(m => m.Notes).HasColumnName("notes");
+            e.Property(m => m.CaloriesConsumed).HasColumnName("calories_consumed").HasPrecision(7, 2);
+            e.Property(m => m.ProteinConsumed).HasColumnName("protein_consumed").HasPrecision(6, 2);
+            e.Property(m => m.FatConsumed).HasColumnName("fat_consumed").HasPrecision(6, 2);
             e.HasOne(m => m.Ingredient)
              .WithMany(i => i.MealEntries)
              .HasForeignKey(m => m.IngredientId);
@@ -83,10 +81,13 @@ public class AppDbContext : DbContext
 
         mb.Entity<DailyGlSummary>(e => {
             e.ToTable("daily_gl_summaries");
-            e.HasKey(s => new { s.UserId, s.SummaryDate });
+            e.HasKey(s => s.SummaryId);
+            e.Property(s => s.SummaryId).HasColumnName("summary_id").HasDefaultValueSql("gen_random_uuid()");
             e.Property(s => s.UserId).HasColumnName("user_id");
-            e.Property(s => s.SummaryDate).HasColumnName("summary_date");
+            e.Property(s => s.SummaryDate).HasColumnName("date");
             e.Property(s => s.TotalGl).HasColumnName("total_gl").HasPrecision(6, 2);
+            e.Property(s => s.EntryCount).HasColumnName("entry_count");
+            e.HasIndex(s => new { s.UserId, s.SummaryDate }).IsUnique();
         });
     }
 }

@@ -33,6 +33,9 @@ public class MealEntriesController : ControllerBase
                 entry.FinalGL,
                 entry.MealType,
                 entry.LoggedAt,
+                entry.CaloriesConsumed,
+                entry.ProteinConsumed,
+                entry.FatConsumed,
                 IngredientName = entry.Ingredient.Name,
                 PrepMethodName = entry.PrepMethod.MethodName,
                 GiMultiplier = entry.PrepMethod.GiMultiplier,
@@ -41,6 +44,11 @@ public class MealEntriesController : ControllerBase
         catch (ArgumentException ex)
         {
             return NotFound(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            var detail = ex.InnerException?.Message ?? ex.Message;
+            return StatusCode(500, new { error = "Failed to log entry.", detail });
         }
     }
 
@@ -59,6 +67,9 @@ public class MealEntriesController : ControllerBase
             e.MealType,
             e.LoggedAt,
             e.Notes,
+            e.CaloriesConsumed,
+            e.ProteinConsumed,
+            e.FatConsumed,
             IngredientName = e.Ingredient.Name,
             LocalName = e.Ingredient.LocalName,
             BaseGI = e.Ingredient.BaseGI,

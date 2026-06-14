@@ -91,16 +91,20 @@ public class GlycemicService
         {
             summary = new DailyGlSummary
             {
+                SummaryId = Guid.NewGuid(),
                 UserId = userId,
                 SummaryDate = today,
                 TotalGl = 0,
+                EntryCount = 0,
             };
             _context.DailyGlSummaries.Add(summary);
         }
 
         summary.TotalGl += isAdd ? glDelta : -glDelta;
+        summary.EntryCount += (short)(isAdd ? 1 : -1);
 
         if (summary.TotalGl < 0) summary.TotalGl = 0;
+        if (summary.EntryCount < 0) summary.EntryCount = 0;
     }
 
     public async Task<List<DailyGlSummary>> GetWeeklySummaryAsync(Guid userId)
@@ -114,6 +118,23 @@ public class GlycemicService
                      && s.SummaryDate <= today)
             .OrderBy(s => s.SummaryDate)
             .ToListAsync();
+    }
+
+    public async Task<DailyGlSummary> GetTodaySummaryAsync(Guid userId)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var summary = await _context.DailyGlSummaries
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.SummaryDate == today);
+
+        return summary ?? new DailyGlSummary
+        {
+            SummaryId = Guid.Empty,
+            UserId = userId,
+            SummaryDate = today,
+            TotalGl = 0,
+            EntryCount = 0,
+        };
     }
 
     public GlPreviewResult PreviewGL(GlPreviewDto dto)
