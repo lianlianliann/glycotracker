@@ -178,7 +178,7 @@ export function Onboarding() {
 
       const diabetesType = CONDITION_TO_DIABETES_TYPE[condition] ?? "none";
       const activityLevel = ACTIVITY_TO_DB_VALUE[activity] ?? activity;
-      const API = import.meta.env.VITE_API_URL;
+      const API = "https://localhost:7214";
 
       const res = await fetch(`${API}/api/user-profile`, {
         method: "POST",

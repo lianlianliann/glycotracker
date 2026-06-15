@@ -18,7 +18,7 @@ import { TickSlider } from "../components/TickSlider";
 import { PREP_METHOD_LIST, multColor } from "../constants";
 import { supabase } from "../../lib/supabaseClient";
 
-const API = import.meta.env.VITE_API_URL;
+const API = "https://localhost:7214";
 
 interface ApiIngredient {
   ingredientId: string;

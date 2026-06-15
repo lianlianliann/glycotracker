@@ -35,7 +35,7 @@ export function Login() {
 
     // Check if this user already completed onboarding (has a user_profiles row)
     try {
-      const API = import.meta.env.VITE_API_URL;
+      const API = "https://localhost:7214";
       const res = await fetch(`${API}/api/user-profile/${data.user.id}`);
 
       if (res.status === 404) {

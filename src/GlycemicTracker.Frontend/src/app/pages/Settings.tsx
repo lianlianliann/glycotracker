@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { ChevronRight, Key, Download, Globe, Trash2 } from "lucide-react";
+import { ChevronRight, Key, Download, Globe, Trash2, Loader2 } from "lucide-react";
 import { TickSlider } from "../components/TickSlider";
 import { EditProfileModal, type ProfileData } from "../components/EditProfileModal";
+import { supabase } from "../../lib/supabaseClient";
+
+const API = "https://localhost:7214";
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -20,27 +23,29 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 }
 
 function initials(name: string) {
+  if (!name) return "??";
   return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
 export function Settings() {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Profile state — in a real app this would come from the DB/auth context
+  // Profile state 
   const [profile, setProfile] = useState<ProfileData>({
-    name: "Juan dela Cruz",
-    email: "juan@email.com",
-    weight: "72",
-    activity: "Moderately Active",
-    condition: "Prediabetes",
+    name: "Loading...",
+    email: "loading@email.com",
+    weight: "0",
+    activity: "Sedentary",
+    condition: "General Health",
   });
 
   const [showEditProfile, setShowEditProfile] = useState(false);
 
-  // Goal targets (set by onboarding or manually)
-  const [glTarget, setGlTarget] = useState(80);
-  const [calorieTarget, setCalorieTarget] = useState(2100);
-  const [proteinTarget, setProteinTarget] = useState(72);
+  // Goal targets
+  const [glTarget, setGlTarget] = useState(100);
+  const [calorieTarget, setCalorieTarget] = useState(2000);
+  const [proteinTarget, setProteinTarget] = useState(60);
 
   const [prefs, setPrefs] = useState({
     glReminder: true,
@@ -51,10 +56,54 @@ export function Settings() {
 
   const togglePref = (key: keyof typeof prefs) => setPrefs(p => ({ ...p, [key]: !p[key] }));
 
-  const handleSaveProfile = (updated: ProfileData, recalculate: boolean) => {
+  // ── Fetch Profile on Mount ──────────────────────────────
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return navigate("/login");
+
+        const res = await fetch(`${API}/api/user-profile/${user.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setProfile({
+            name: data.displayName || "User",
+            email: user.email || "",
+            weight: data.weight?.toString() || "70",
+            activity: data.activityLevel || "Moderately Active",
+            condition: data.diabetesType === "type1" ? "Type 1 Diabetes" 
+                     : data.diabetesType === "type2" ? "Type 2 Diabetes"
+                     : data.diabetesType === "prediabetes" ? "Prediabetes" 
+                     : "General Health"
+          });
+          setGlTarget(data.dailyGlTarget || 100);
+          
+          // Calculate macro targets based on fetched weight/condition
+          const w = data.weight || 70;
+          const mult = data.activityLevel === "sedentary" ? 1.2
+            : data.activityLevel === "lightly_active" ? 1.375
+            : data.activityLevel === "moderately_active" ? 1.55
+            : 1.725;
+          setCalorieTarget(Math.round(w * 25 * mult));
+          setProteinTarget(Math.round(w * (data.diabetesType === "none" ? 0.8 : data.diabetesType === "prediabetes" ? 1.0 : 1.2)));
+        }
+      } catch (err) {
+        console.error("Error loading profile", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadProfile();
+  }, [navigate]);
+
+  // ── Save Profile to Backend ─────────────────────────────
+  const handleSaveProfile = async (updated: ProfileData, recalculate: boolean) => {
     setProfile(updated);
+    
+    // Update Local Targets
+    let newGL = glTarget;
     if (recalculate) {
-      const newGL = updated.condition === "General Health" ? 100
+      newGL = updated.condition === "General Health" ? 100
         : updated.condition === "Prediabetes" ? 80
         : updated.condition === "Type 1 Diabetes" ? 70
         : 60;
@@ -67,14 +116,45 @@ export function Settings() {
       setCalorieTarget(Math.round(w * 25 * mult));
       setProteinTarget(Math.round(w * (updated.condition === "General Health" ? 0.8 : updated.condition === "Prediabetes" ? 1.0 : 1.2)));
     }
+
+    // Push to Backend
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const dbCondition = updated.condition === "General Health" ? "none"
+        : updated.condition === "Prediabetes" ? "prediabetes"
+        : updated.condition === "Type 1 Diabetes" ? "type1"
+        : "type2";
+
+      const dbActivity = updated.activity === "Sedentary" ? "sedentary"
+        : updated.activity === "Lightly Active" ? "lightly_active"
+        : updated.activity === "Moderately Active" ? "moderately_active"
+        : "very_active";
+
+      await fetch(`${API}/api/user-profile/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName: updated.name,
+          weight: Number(updated.weight),
+          diabetesType: dbCondition,
+          activityLevel: dbActivity,
+          dailyGlTarget: newGL
+        })
+      });
+    } catch (err) {
+      console.error("Failed to update profile", err);
+    }
   };
 
   // Export meal logs as CSV
   const handleExportData = async () => {
     try {
-      const response = await fetch(
-        `http://localhost:7214/api/meal-entries?userId=${profile.email}`
-      );
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const response = await fetch(`${API}/api/meal-entries?userId=${user.id}`);
       const entries = await response.json();
 
       const csv = [
@@ -89,7 +169,7 @@ export function Settings() {
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement("a");
       a.href     = url;
-      a.download = "meal-logs.csv";
+      a.download = "glycotrack-meal-logs.csv";
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -97,20 +177,22 @@ export function Settings() {
     }
   };
 
-  // Timezone — defaulting to Asia/Manila for Philippine users
-  const handleSaveTimezone = () => {
-    alert("Timezone is set to Asia/Manila by default for Philippine users.");
-  };
-
-  // Delete account
+  const handleSaveTimezone = () => alert("Timezone is set to Asia/Manila by default for Philippine users.");
+  
   const handleDeleteAccount = () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete your account? This cannot be undone."
-    );
-    if (confirmed) {
+    if (window.confirm("Are you sure you want to delete your account? This cannot be undone.")) {
       alert("Account deletion requires Supabase Auth admin — contact your backend.");
     }
   };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/login");
+  };
+
+  if (isLoading) {
+    return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-gray-400" /></div>;
+  }
 
   return (
     <div className="max-w-[720px] mx-auto px-6 py-8">
@@ -199,12 +281,7 @@ export function Settings() {
       <div className="bg-white rounded-xl p-2 mb-4" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}>
         <h2 className="font-semibold px-4 pt-3 pb-2" style={{ color: "#1C1C1C" }}>Account</h2>
 
-        {/* Change Password */}
-        <button
-          onClick={() => alert("Change password: feature uses Supabase Auth — coming soon.")}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-gray-50 text-left border-b"
-          style={{ borderColor: "#F5F2ED" }}
-        >
+        <button onClick={() => alert("Change password uses Supabase Auth — coming soon.")} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-gray-50 text-left border-b" style={{ borderColor: "#F5F2ED" }}>
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#EDE8DF" }}>
             <Key size={15} style={{ color: "#6B6B6B" }} />
           </div>
@@ -214,12 +291,7 @@ export function Settings() {
           <ChevronRight size={15} style={{ color: "#6B6B6B" }} />
         </button>
 
-        {/* Export My Data */}
-        <button
-          onClick={handleExportData}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-gray-50 text-left border-b"
-          style={{ borderColor: "#F5F2ED" }}
-        >
+        <button onClick={handleExportData} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-gray-50 text-left border-b" style={{ borderColor: "#F5F2ED" }}>
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#EDE8DF" }}>
             <Download size={15} style={{ color: "#6B6B6B" }} />
           </div>
@@ -230,12 +302,7 @@ export function Settings() {
           <ChevronRight size={15} style={{ color: "#6B6B6B" }} />
         </button>
 
-        {/* Timezone */}
-        <button
-          onClick={handleSaveTimezone}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-gray-50 text-left border-b"
-          style={{ borderColor: "#F5F2ED" }}
-        >
+        <button onClick={handleSaveTimezone} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-gray-50 text-left border-b" style={{ borderColor: "#F5F2ED" }}>
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#EDE8DF" }}>
             <Globe size={15} style={{ color: "#6B6B6B" }} />
           </div>
@@ -246,11 +313,7 @@ export function Settings() {
           <ChevronRight size={15} style={{ color: "#6B6B6B" }} />
         </button>
 
-        {/* Delete Account */}
-        <button
-          onClick={handleDeleteAccount}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors hover:bg-red-50"
-        >
+        <button onClick={handleDeleteAccount} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors hover:bg-red-50">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#FAEAE3" }}>
             <Trash2 size={15} style={{ color: "#C4673A" }} />
           </div>
@@ -261,14 +324,13 @@ export function Settings() {
 
       {/* ── Sign out ─────────────────────────────────────────── */}
       <button
-        onClick={() => navigate("/")}
+        onClick={handleSignOut}
         className="w-full py-2.5 rounded-lg font-semibold text-sm border transition-colors hover:bg-red-50"
         style={{ borderColor: "#C4673A", color: "#C4673A" }}
       >
         Sign out
       </button>
 
-      {/* ── Edit Profile Modal ───────────────────────────────── */}
       {showEditProfile && (
         <EditProfileModal
           profile={profile}
