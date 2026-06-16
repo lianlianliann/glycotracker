@@ -108,15 +108,20 @@ public class GlycemicService
 
     public async Task<List<MealEntry>> GetEntriesByDateAsync(Guid userId, DateOnly date, string timezone = "Asia/Manila")
     {
-        var dayStart = new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue), ManilaOffset);
-        var dayEnd = dayStart.AddDays(1);
+ 
+        var localDayStart = new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue), ManilaOffset);
+        var localDayEnd = localDayStart.AddDays(1);
+
+        
+        var utcDayStart = localDayStart.ToUniversalTime();
+        var utcDayEnd = localDayEnd.ToUniversalTime();
 
         return await _context.MealEntries
             .Include(e => e.Ingredient)
             .Include(e => e.PrepMethod)
             .Where(e => e.UserId == userId
-                     && e.LoggedAt >= dayStart
-                     && e.LoggedAt < dayEnd)
+                     && e.LoggedAt >= utcDayStart    
+                     && e.LoggedAt < utcDayEnd)
             .OrderBy(e => e.LoggedAt)
             .ToListAsync();
     }

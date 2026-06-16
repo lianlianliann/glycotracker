@@ -24,6 +24,8 @@ export function Register() {
         data: {
           display_name: displayName,
         },
+        // Optional: Add this to redirect them directly to onboarding after clicking the email link
+        emailRedirectTo: `${window.location.origin}/onboarding`
       },
     });
 
@@ -39,7 +41,15 @@ export function Register() {
       return;
     }
 
-    // Store display_name so Onboarding can use it without re-asking
+    // If session is null, email confirmation is required
+    if (!data.session) {
+      setError("Account created! Please check your email for the verification link before continuing.");
+      localStorage.setItem("glycotrack_display_name", displayName);
+      localStorage.setItem("glycotrack_pending_onboarding", "true");
+      return; 
+    }
+
+    // If email confirmation is off, navigate immediately
     localStorage.setItem("glycotrack_display_name", displayName);
     localStorage.setItem("glycotrack_pending_onboarding", "true");
     navigate("/onboarding");

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { BarChart, Bar, XAxis, YAxis, ReferenceLine, ResponsiveContainer } from "recharts";
-import { Zap, Beef, Droplets, ChevronRight, Flame, Snowflake, Wind } from "lucide-react";
+import { Zap, Beef, ChevronRight, Flame, Snowflake, Wind } from "lucide-react";
 import { MEAL_COLORS, multColor } from "../constants";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -23,12 +23,15 @@ function GlIcon({ type }: { type: string }) {
 export function Dashboard() {
   const [glToday, setGlToday] = useState(0);
   const [glTarget, setGlTarget] = useState(100);
-  const [weekData, setWeekData] = useState<{ day: string; gl: number }[]>([]);
   
-  // New states for Option A
+  // Custom Local Storage Targets
+  const [calorieTarget, setCalorieTarget] = useState(2000);
+  const [proteinTarget, setProteinTarget] = useState(60);
+
+  const [weekData, setWeekData] = useState<{ day: string; gl: number }[]>([]);
   const [entries, setEntries] = useState<any[]>([]);
-  const [mealGl, setMealGl] = useState({ Breakfast: 0, Lunch: 0, Dinner: 0, Snack: 0 });
-  const [macros, setMacros] = useState({ protein: 0, fat: 0 });
+  const [mealGl, setMealGl] = useState({ Breakfast: 0, Lunch: 0, Dinner: 0, Snack: 0, Other: 0 });
+  const [macros, setMacros] = useState({ protein: 0, fat: 0, calories: 0 });
   
   const [isLoading, setIsLoading] = useState(true);
   const remaining = Math.max(glTarget - glToday, 0);
@@ -40,6 +43,12 @@ export function Dashboard() {
         if (!user) return;
 
         const API = "https://localhost:7214";
+
+        // Load custom targets from local storage
+        const savedCal = localStorage.getItem(`glycotrack_cal_${user.id}`);
+        const savedPro = localStorage.getItem(`glycotrack_pro_${user.id}`);
+        if (savedCal) setCalorieTarget(Number(savedCal));
+        if (savedPro) setProteinTarget(Number(savedPro));
 
         // 1. Fetch Today's Totals
         const todayRes = await fetch(`${API}/api/dashboard/today?userId=${user.id}`);
@@ -61,7 +70,7 @@ export function Dashboard() {
           setWeekData(formattedWeek);
         }
 
-        // 3. Fetch Today's Meal Entries (Option A Implementation)
+        // 3. Fetch Today's Meal Entries
         const entriesRes = await fetch(`${API}/api/meal-entries?userId=${user.id}`);
         if (entriesRes.ok) {
           const entriesData = await entriesRes.json();
@@ -70,18 +79,23 @@ export function Dashboard() {
           // Calculate dynamic Meal Breakdown and Macros from the entries
           let p = 0;
           let f = 0;
-          const currentMealGl = { Breakfast: 0, Lunch: 0, Dinner: 0, Snack: 0 };
+          let c = 0;
+          const currentMealGl: Record<string, number> = { Breakfast: 0, Lunch: 0, Dinner: 0, Snack: 0, Other: 0 };
           
           entriesData.forEach((entry: any) => {
-            if (currentMealGl[entry.mealType as keyof typeof currentMealGl] !== undefined) {
-              currentMealGl[entry.mealType as keyof typeof currentMealGl] += entry.finalGL;
-            }
+            // Group the meals safely
+            const mealKey = entry.mealType && currentMealGl[entry.mealType] !== undefined 
+                ? entry.mealType 
+                : "Other";
+
+            currentMealGl[mealKey] += entry.finalGL;
             p += entry.proteinConsumed || 0;
             f += entry.fatConsumed || 0;
+            c += entry.caloriesConsumed || 0;
           });
 
-          setMealGl(currentMealGl);
-          setMacros({ protein: Math.round(p), fat: Math.round(f) });
+          setMealGl(currentMealGl as any);
+          setMacros({ protein: Math.round(p), fat: Math.round(f), calories: Math.round(c) });
         }
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
@@ -90,7 +104,14 @@ export function Dashboard() {
       }
     };
 
+    // Fetch immediately on load
     fetchDashboardData();
+
+    // Listen for Settings update event
+    window.addEventListener("glycotrack_update", fetchDashboardData);
+
+    // Cleanup listener on unmount
+    return () => window.removeEventListener("glycotrack_update", fetchDashboardData);
   }, []);
 
   return (
@@ -173,12 +194,12 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Stats Row */}
+      {/* Stats Row (UPDATED WITH TARGETS) */}
       <div className="grid grid-cols-3 gap-4 mb-5">
         {[
-          { label: "GL Today", value: glToday.toFixed(1), unit: "units", icon: Zap, color: "#3D6B4F", bg: "linear-gradient(135deg, #E8F5EC, #F0FAF2)", accent: "rgba(61,107,79,0.12)" },
-          { label: "Protein", value: macros.protein, unit: "g", icon: Beef, color: "#D4923A", bg: "linear-gradient(135deg, #FEF3E2, #FFF8EE)", accent: "rgba(212,146,58,0.12)" },
-          { label: "Fat", value: macros.fat, unit: "g", icon: Droplets, color: "#6A9E72", bg: "linear-gradient(135deg, #EDF5EF, #F4FAF5)", accent: "rgba(106,158,114,0.12)" },
+          { label: "GL Today", value: `${glToday.toFixed(1)} / ${glTarget}`, unit: "", icon: Zap, color: "#3D6B4F", bg: "linear-gradient(135deg, #E8F5EC, #F0FAF2)", accent: "rgba(61,107,79,0.12)" },
+          { label: "Calories", value: `${macros.calories} / ${calorieTarget}`, unit: "kcal", icon: Flame, color: "#C4673A", bg: "linear-gradient(135deg, #FAEAE3, #FDF5F2)", accent: "rgba(196,103,58,0.12)" },
+          { label: "Protein", value: `${macros.protein} / ${proteinTarget}`, unit: "g", icon: Beef, color: "#D4923A", bg: "linear-gradient(135deg, #FEF3E2, #FFF8EE)", accent: "rgba(212,146,58,0.12)" },
         ].map(({ label, value, unit, icon: Icon, color, bg, accent }) => (
           <div key={label} className="rounded-xl p-4 bg-white" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: `1px solid ${accent}` }}>
             <div className="flex items-center gap-2 mb-3">
@@ -188,7 +209,7 @@ export function Dashboard() {
               <span className="text-xs font-medium" style={{ color: "#6B6B6B" }}>{label}</span>
             </div>
             <div>
-              <span className="text-2xl font-bold" style={{ color: "#1C1C1C", fontVariantNumeric: "tabular-nums" }}>{value}</span>
+              <span className="text-xl font-bold" style={{ color: "#1C1C1C", fontVariantNumeric: "tabular-nums" }}>{value}</span>
               <span className="text-xs ml-1" style={{ color: "#6B6B6B" }}>{unit}</span>
             </div>
           </div>
@@ -248,7 +269,7 @@ export function Dashboard() {
               >
                 <div
                   className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                  style={{ backgroundColor: MEAL_COLORS[entry.mealType] ?? "#6B6B6B", boxShadow: `0 2px 8px ${MEAL_COLORS[entry.mealType] ?? "#6B6B6B"}44` }}
+                  style={{ backgroundColor: MEAL_COLORS[entry.mealType as keyof typeof MEAL_COLORS] ?? "#6B6B6B", boxShadow: `0 2px 8px ${MEAL_COLORS[entry.mealType as keyof typeof MEAL_COLORS] ?? "#6B6B6B"}44` }}
                 >
                   {entry.ingredientName[0]}
                 </div>

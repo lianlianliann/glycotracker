@@ -132,15 +132,23 @@ export function Diary() {
   const glPct = Math.min(glToday / glTarget, 1);
   const glStatusColor = glToday > glTarget ? "#C4673A" : glToday > 80 ? "#D4923A" : "#3D6B4F";
 
-  // Group by MealType (Capitalize first letter to match design)
+  // Group by MealType, safely handling nulls or unknown types
   const MEAL_ORDER = ["Breakfast", "Lunch", "Dinner", "Snack"];
   const grouped = MEAL_ORDER.reduce<Record<string, any[]>>((acc, meal) => {
     const items = entries.filter((e) => 
-      e.mealType?.toLowerCase() === meal.toLowerCase()
+      e.mealType && e.mealType.toLowerCase() === meal.toLowerCase()
     );
     if (items.length > 0) acc[meal] = items;
     return acc;
   }, {});
+
+  // Catch any items that didn't fit into the 4 main categories (null, blank, or typos)
+  const otherItems = entries.filter((e) => 
+    !e.mealType || !MEAL_ORDER.some((m) => m.toLowerCase() === e.mealType.toLowerCase())
+  );
+  if (otherItems.length > 0) {
+    grouped["Other"] = otherItems;
+  }
 
   const today = new Date();
   const isTodayDate = isSameDay(currentDate, today);
@@ -286,7 +294,8 @@ export function Diary() {
       {/* ── Meal Sections ──────────────────────────────────── */}
       {!isLoading && Object.entries(grouped).map(([meal, items]) => {
         const mealGL = items.reduce((s, e) => s + (e.finalGL || 0), 0);
-        const mealColor = MEAL_COLORS[meal as keyof typeof MEAL_COLORS] ?? "#6B6B6B";
+        // Fallback color for "Other" category
+        const mealColor = MEAL_COLORS[meal as keyof typeof MEAL_COLORS] ?? "#8B8B8B";
         return (
           <div
             key={meal}
@@ -322,7 +331,7 @@ export function Diary() {
                     boxShadow: `0 2px 8px ${mealColor}44`,
                   }}
                 >
-                  {entry.ingredientName[0]}
+                  {entry.ingredientName?.[0] || "?"}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm" style={{ color: "#1C1C1C" }}>
@@ -344,7 +353,7 @@ export function Diary() {
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
-                    ×{entry.giMultiplier.toFixed(2)}
+                    ×{entry.giMultiplier?.toFixed(2)}
                   </span>
                 </div>
                 <div className="text-right shrink-0 w-16">
@@ -406,10 +415,10 @@ export function Diary() {
         </div>
       )}
 
-      {/* ── Redirect FAB to /logfood ────────────────────────────────── */}
+      {/* ── Redirect FAB to /log (Fixed from /logfood) ──────────────── */}
       <div className="fixed bottom-8 right-8 z-30">
         <button
-          onClick={() => navigate("/logfood")}
+          onClick={() => navigate("/log")}
           className="flex items-center gap-2 px-5 py-3.5 rounded-2xl font-semibold text-sm text-white transition-all hover:scale-105 active:scale-95"
           style={{
             background: "linear-gradient(135deg, #3D6B4F, #2D5540)",

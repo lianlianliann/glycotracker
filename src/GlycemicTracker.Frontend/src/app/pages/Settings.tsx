@@ -31,7 +31,6 @@ export function Settings() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
 
-  // Profile state 
   const [profile, setProfile] = useState<ProfileData>({
     name: "Loading...",
     email: "loading@email.com",
@@ -42,10 +41,12 @@ export function Settings() {
 
   const [showEditProfile, setShowEditProfile] = useState(false);
 
-  // Goal targets
   const [glTarget, setGlTarget] = useState(100);
   const [calorieTarget, setCalorieTarget] = useState(2000);
   const [proteinTarget, setProteinTarget] = useState(60);
+
+  const [goalsChanged, setGoalsChanged] = useState(false);
+  const [isSavingGoals, setIsSavingGoals] = useState(false);
 
   const [prefs, setPrefs] = useState({
     glReminder: true,
@@ -56,7 +57,6 @@ export function Settings() {
 
   const togglePref = (key: keyof typeof prefs) => setPrefs(p => ({ ...p, [key]: !p[key] }));
 
-  // ── Fetch Profile on Mount ──────────────────────────────
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -78,14 +78,17 @@ export function Settings() {
           });
           setGlTarget(data.dailyGlTarget || 100);
           
-          // Calculate macro targets based on fetched weight/condition
           const w = data.weight || 70;
           const mult = data.activityLevel === "sedentary" ? 1.2
             : data.activityLevel === "lightly_active" ? 1.375
             : data.activityLevel === "moderately_active" ? 1.55
             : 1.725;
-          setCalorieTarget(Math.round(w * 25 * mult));
-          setProteinTarget(Math.round(w * (data.diabetesType === "none" ? 0.8 : data.diabetesType === "prediabetes" ? 1.0 : 1.2)));
+            
+          const savedCal = localStorage.getItem(`glycotrack_cal_${user.id}`);
+          const savedPro = localStorage.getItem(`glycotrack_pro_${user.id}`);
+
+          setCalorieTarget(savedCal ? Number(savedCal) : Math.round(w * 25 * mult));
+          setProteinTarget(savedPro ? Number(savedPro) : Math.round(w * (data.diabetesType === "none" ? 0.8 : data.diabetesType === "prediabetes" ? 1.0 : 1.2)));
         }
       } catch (err) {
         console.error("Error loading profile", err);
@@ -96,11 +99,52 @@ export function Settings() {
     loadProfile();
   }, [navigate]);
 
-  // ── Save Profile to Backend ─────────────────────────────
+  const handleSaveGoals = async () => {
+    setIsSavingGoals(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const dbCondition = profile.condition === "General Health" ? "none"
+        : profile.condition === "Prediabetes" ? "prediabetes"
+        : profile.condition === "Type 1 Diabetes" ? "type1"
+        : "type2";
+
+      const dbActivity = profile.activity === "Sedentary" ? "sedentary"
+        : profile.activity === "Lightly Active" ? "lightly_active"
+        : profile.activity === "Moderately Active" ? "moderately_active"
+        : "very_active";
+
+      await fetch(`${API}/api/user-profile/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName: profile.name,
+          weight: Number(profile.weight),
+          diabetesType: dbCondition,
+          activityLevel: dbActivity,
+          dailyGlTarget: glTarget
+        })
+      });
+
+      localStorage.setItem(`glycotrack_cal_${user.id}`, calorieTarget.toString());
+      localStorage.setItem(`glycotrack_pro_${user.id}`, proteinTarget.toString());
+
+      setGoalsChanged(false);
+      
+      // Dispatch global event so Sidebar and Dashboard update
+      window.dispatchEvent(new Event("glycotrack_update"));
+      
+    } catch (err) {
+      console.error("Failed to save goals", err);
+    } finally {
+      setIsSavingGoals(false);
+    }
+  };
+
   const handleSaveProfile = async (updated: ProfileData, recalculate: boolean) => {
     setProfile(updated);
     
-    // Update Local Targets
     let newGL = glTarget;
     if (recalculate) {
       newGL = updated.condition === "General Health" ? 100
@@ -115,9 +159,9 @@ export function Settings() {
         : 1.725;
       setCalorieTarget(Math.round(w * 25 * mult));
       setProteinTarget(Math.round(w * (updated.condition === "General Health" ? 0.8 : updated.condition === "Prediabetes" ? 1.0 : 1.2)));
+      setGoalsChanged(true);
     }
 
-    // Push to Backend
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -143,12 +187,15 @@ export function Settings() {
           dailyGlTarget: newGL
         })
       });
+      
+      // Dispatch global event
+      window.dispatchEvent(new Event("glycotrack_update"));
+
     } catch (err) {
       console.error("Failed to update profile", err);
     }
   };
 
-  // Export meal logs as CSV
   const handleExportData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -178,7 +225,6 @@ export function Settings() {
   };
 
   const handleSaveTimezone = () => alert("Timezone is set to Asia/Manila by default for Philippine users.");
-  
   const handleDeleteAccount = () => {
     if (window.confirm("Are you sure you want to delete your account? This cannot be undone.")) {
       alert("Account deletion requires Supabase Auth admin — contact your backend.");
@@ -198,7 +244,6 @@ export function Settings() {
     <div className="max-w-[720px] mx-auto px-6 py-8">
       <h1 className="text-2xl font-bold mb-6" style={{ color: "#1C1C1C" }}>Settings</h1>
 
-      {/* ── Profile — glossy ──────────────────────────────── */}
       <div
         className="rounded-xl p-6 mb-4 relative overflow-hidden"
         style={{ background: "linear-gradient(135deg, #1A3829 0%, #2D5540 55%, #3D6B4F 100%)", boxShadow: "0 6px 28px rgba(61,107,79,0.35)" }}
@@ -236,14 +281,36 @@ export function Settings() {
         </div>
       </div>
 
-      {/* ── Goals ────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-6 mb-4" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}>
-        <h2 className="font-semibold mb-4" style={{ color: "#1C1C1C" }}>Goals</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="font-semibold" style={{ color: "#1C1C1C" }}>Goals</h2>
+          
+          {goalsChanged && (
+            <button
+              onClick={handleSaveGoals}
+              disabled={isSavingGoals}
+              className="text-xs font-bold px-4 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90 disabled:opacity-50 shadow-sm"
+              style={{ background: "linear-gradient(135deg, #3D6B4F, #2D5540)" }}
+            >
+              {isSavingGoals ? "Saving..." : "Save targets"}
+            </button>
+          )}
+        </div>
+
         <div className="flex flex-col gap-6">
           {[
-            { label: "Daily GL target", value: glTarget, unit: "GL", min: 50, max: 200, set: setGlTarget, ticks: 10 },
-            { label: "Daily calorie target", value: calorieTarget, unit: "kcal", min: 1000, max: 4000, set: setCalorieTarget, ticks: 12 },
-            { label: "Daily protein target", value: proteinTarget, unit: "g", min: 20, max: 300, set: setProteinTarget, ticks: 10 },
+            { 
+              label: "Daily GL target", value: glTarget, unit: "GL", min: 50, max: 200, ticks: 10,
+              set: (v: number) => { setGlTarget(v); setGoalsChanged(true); } 
+            },
+            { 
+              label: "Daily calorie target", value: calorieTarget, unit: "kcal", min: 1000, max: 4000, ticks: 12,
+              set: (v: number) => { setCalorieTarget(v); setGoalsChanged(true); }
+            },
+            { 
+              label: "Daily protein target", value: proteinTarget, unit: "g", min: 20, max: 300, ticks: 10,
+              set: (v: number) => { setProteinTarget(v); setGoalsChanged(true); }
+            },
           ].map(({ label, value, unit, min, max, set, ticks }) => (
             <div key={label}>
               <div className="flex justify-between mb-2">
@@ -256,7 +323,6 @@ export function Settings() {
         </div>
       </div>
 
-      {/* ── Preferences ──────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-6 mb-4" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}>
         <h2 className="font-semibold mb-4" style={{ color: "#1C1C1C" }}>Preferences</h2>
         <div className="flex flex-col gap-4">
@@ -277,7 +343,6 @@ export function Settings() {
         </div>
       </div>
 
-      {/* ── Account ──────────────────────────────────────────── */}
       <div className="bg-white rounded-xl p-2 mb-4" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.07)" }}>
         <h2 className="font-semibold px-4 pt-3 pb-2" style={{ color: "#1C1C1C" }}>Account</h2>
 
@@ -322,7 +387,6 @@ export function Settings() {
         </button>
       </div>
 
-      {/* ── Sign out ─────────────────────────────────────────── */}
       <button
         onClick={handleSignOut}
         className="w-full py-2.5 rounded-lg font-semibold text-sm border transition-colors hover:bg-red-50"

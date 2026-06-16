@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { Leaf, LayoutDashboard, PlusCircle, BarChart2, Settings, Flame, LogOut, ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
+import { supabase } from "../../lib/supabaseClient";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -19,7 +21,57 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const navigate = useNavigate();
   const w = collapsed ? 64 : 220;
 
+  const [displayName, setDisplayName] = useState("Loading...");
+  const [glTarget, setGlTarget] = useState<number>(100);
+
+  const API = "https://localhost:7214";
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const res = await fetch(`${API}/api/user-profile/${user.id}`);
+        if (res.ok) {
+          const profile = await res.json();
+          setDisplayName(profile.displayName || "User");
+          setGlTarget(profile.dailyGlTarget || 100);
+        } else {
+          const localName = localStorage.getItem("glycotrack_display_name");
+          if (localName) setDisplayName(localName);
+        }
+      } catch (err) {
+        console.error("Failed to fetch profile in sidebar:", err);
+      }
+    };
+
+    // Fetch immediately on load
+    fetchProfile();
+
+    // Listen for updates from the Settings page
+    window.addEventListener("glycotrack_update", fetchProfile);
+
+    // Cleanup listener
+    return () => window.removeEventListener("glycotrack_update", fetchProfile);
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem("glycotrack_display_name");
+    navigate("/");
+  };
+
   const isActive = (path: string) => location.pathname === path;
+
+  const getInitials = (name: string) => {
+    if (!name || name === "Loading...") return "--";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const initials = getInitials(displayName);
 
   return (
     <aside
@@ -30,13 +82,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         borderRight: "1px solid rgba(255,255,255,0.07)",
       }}
     >
-      {/* Subtle gloss orb */}
       <div
         className="absolute top-[-60px] left-[-40px] w-[200px] h-[200px] rounded-full pointer-events-none"
         style={{ background: "radial-gradient(circle, rgba(106,158,114,0.25) 0%, transparent 70%)" }}
       />
 
-      {/* Logo + toggle */}
       <div
         className={`relative z-10 flex items-center h-16 px-4 shrink-0 ${collapsed ? "justify-center" : "justify-between"}`}
         style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
@@ -65,13 +115,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           style={{ color: "rgba(255,255,255,0.5)" }}
           onMouseEnter={e => ((e.currentTarget as HTMLElement).style.backgroundColor = "rgba(255,255,255,0.1)")}
           onMouseLeave={e => ((e.currentTarget as HTMLElement).style.backgroundColor = "transparent")}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
       </div>
 
-      {/* Streak chip */}
       <div className="relative z-10 px-2 pt-4 mb-3 shrink-0">
         {!collapsed ? (
           <div
@@ -86,7 +134,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <div
               className="w-9 h-9 rounded-lg flex items-center justify-center"
               style={{ backgroundColor: "rgba(212,146,58,0.2)", border: "1px solid rgba(212,146,58,0.3)" }}
-              title="7-day streak"
             >
               <Flame size={15} style={{ color: "#F5C46A" }} />
             </div>
@@ -94,7 +141,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         )}
       </div>
 
-      {/* Nav items */}
       <nav className="relative z-10 flex-1 px-2 flex flex-col gap-1 overflow-hidden">
         {navItems.map(({ path, label, icon: Icon }) => {
           const active = isActive(path);
@@ -124,7 +170,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         })}
       </nav>
 
-      {/* User footer */}
       <div
         className="relative z-10 shrink-0"
         style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
@@ -136,16 +181,16 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
                 style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)" }}
               >
-                JD
+                {initials}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold truncate text-white">Juan dela Cruz</div>
-                <div className="text-xs truncate" style={{ color: "rgba(255,255,255,0.45)" }}>100 GL target</div>
+                <div className="text-xs font-semibold truncate text-white">{displayName}</div>
+                <div className="text-xs truncate" style={{ color: "rgba(255,255,255,0.45)" }}>{glTarget} GL target</div>
               </div>
             </div>
             <button
-              onClick={() => navigate("/")}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors"
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors cursor-pointer"
               style={{ color: "rgba(255,255,255,0.45)" }}
               onMouseEnter={e => ((e.currentTarget as HTMLElement).style.backgroundColor = "rgba(255,255,255,0.08)")}
               onMouseLeave={e => ((e.currentTarget as HTMLElement).style.backgroundColor = "transparent")}
@@ -158,13 +203,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
               style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)" }}
-              title="Juan dela Cruz"
+              title={displayName}
             >
-              JD
+              {initials}
             </div>
             <button
-              onClick={() => navigate("/")}
-              className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
+              onClick={handleSignOut}
+              className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
               style={{ color: "rgba(255,255,255,0.4)" }}
               title="Sign out"
               onMouseEnter={e => ((e.currentTarget as HTMLElement).style.backgroundColor = "rgba(255,255,255,0.08)")}

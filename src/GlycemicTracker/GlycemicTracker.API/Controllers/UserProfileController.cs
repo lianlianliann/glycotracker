@@ -51,8 +51,8 @@ public class UserProfileController : ControllerBase
         return CreatedAtAction(nameof(Get), new { userId = profile.UserId }, profile);
     }
 
-    // PATCH /api/user-profile/{userId}
-    [HttpPatch("{userId}")]
+    // PUT /api/user-profile/{userId}  <-- CHANGED THIS TO PUT
+    [HttpPut("{userId}")]
     public async Task<IActionResult> Update(Guid userId, [FromBody] UpdateUserProfileDto dto)
     {
         var profile = await _context.UserProfiles.FindAsync(userId);
