@@ -1,12 +1,12 @@
-# 🌿 GlycoTrack — Glycemic Optimization & Meal Prep Tracker
+# GlycoTrack — Glycemic Optimization & Meal Prep Tracker
 
-> *Eat smarter. Track glycemic load.*
+> Eat smarter. Track glycemic load.
 
 A web application that tracks the **glycemic impact of how you cook your food** — not just what you eat. Built for Filipinos managing blood sugar, GlycoTrack introduces a biochemically-aware **Prep-Modifier Algorithm** that adjusts the Glycemic Index of a food item based on its preparation method.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [About the Project](#about-the-project)
 - [Features](#features)
@@ -21,18 +21,18 @@ A web application that tracks the **glycemic impact of how you cook your food** 
 
 ---
 
-## 📖 About the Project
+## About the Project
 
 Traditional nutrition apps focus on calories and macros — but ignore how the **same ingredient** produces different blood sugar responses depending on how it's prepared. Freezing rice overnight creates resistant starch through retrogradation, significantly lowering its glycemic impact. Frying the same rice raises it.
 
 GlycoTrack accounts for this. Every meal entry computes a **final Glycemic Load (GL)** score using a preparation multiplier applied to the base Glycemic Index of the food.
 
-> Built for **COMP 018 – Web Development**  
+> Built for **COMP 016 – Web Development**  
 > Polytechnic University of the Philippines | College of Computer and Information Sciences | June 2026
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Description |
 |---|---|
@@ -49,21 +49,23 @@ GlycoTrack accounts for this. Every meal entry computes a **final Glycemic Load 
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 ### Frontend
+
 | Technology | Purpose |
 |---|---|
-| React 19 + TypeScript | Component-driven UI |
-| Vite 8 | Build tool and dev server |
+| React 18 + TypeScript | Component-driven UI |
+| Vite 6 | Build tool and dev server |
 | Tailwind CSS | Utility-first styling |
 | shadcn/ui | Accessible UI component library |
-| React Router DOM v6 | Client-side routing |
+| React Router v7 | Client-side routing |
 | Recharts | GL trend and analytics charts |
 | Tabler Icons | Prep method badges and feature icons |
 | Supabase JS | Auth client integration |
 
 ### Backend
+
 | Technology | Purpose |
 |---|---|
 | ASP.NET Core (.NET 8) | REST API, GL algorithm engine, business logic |
@@ -72,6 +74,7 @@ GlycoTrack accounts for this. Every meal entry computes a **final Glycemic Load 
 | Swagger / Swashbuckle | API documentation and testing |
 
 ### Database & Infrastructure
+
 | Technology | Purpose |
 |---|---|
 | Supabase (PostgreSQL) | Hosted relational database with Row-Level Security |
@@ -79,7 +82,7 @@ GlycoTrack accounts for this. Every meal entry computes a **final Glycemic Load 
 
 ---
 
-## 👥 Team
+## Team
 
 | Name | Role |
 |---|---|
@@ -90,9 +93,9 @@ GlycoTrack accounts for this. Every meal entry computes a **final Glycemic Load 
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
-```
+```text
 GlycoTrack/
 ├── src/
 │   ├── GlycemicTracker/                    # Backend solution
@@ -109,15 +112,6 @@ GlycoTrack/
 │       │   ├── app/
 │       │   │   ├── components/            # Shared components (Navbar, Sidebar, etc.)
 │       │   │   ├── pages/                 # One file per page
-│       │   │   │   ├── Landing.tsx
-│       │   │   │   ├── Login.tsx
-│       │   │   │   ├── Register.tsx
-│       │   │   │   ├── Onboarding.tsx
-│       │   │   │   ├── Dashboard.tsx
-│       │   │   │   ├── Diary.tsx
-│       │   │   │   ├── LogFood.tsx
-│       │   │   │   ├── Analytics.tsx
-│       │   │   │   └── Settings.tsx
 │       │   │   ├── App.tsx
 │       │   │   └── routes.ts
 │       │   └── styles/
@@ -128,17 +122,15 @@ GlycoTrack/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- [Node.js LTS](https://nodejs.org) — verify with `node -v`
-- [.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) — verify with `dotnet --version`
-- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/community/) (for backend)
-- [VS Code](https://code.visualstudio.com/) (for frontend)
-- A Supabase project with the schema applied (see [Database Schema](#database-schema))
-
----
+- Node.js LTS
+- .NET 8 SDK
+- Visual Studio 2022 (for backend)
+- VS Code (for frontend)
+- A Supabase project
 
 ### 1. Clone the repository
 
@@ -147,13 +139,9 @@ git clone https://github.com/YOUR_USERNAME/GlycoTrack.git
 cd GlycoTrack
 ```
 
----
-
 ### 2. Backend setup
 
-Open `src/GlycemicTracker/GlycemicTracker.sln` in **Visual Studio 2022**.
-
-Add your Supabase connection string to `appsettings.json`:
+Open `src/GlycemicTracker/GlycemicTracker.sln` in Visual Studio 2022. Add your Supabase connection string to `appsettings.json`:
 
 ```json
 {
@@ -163,8 +151,6 @@ Add your Supabase connection string to `appsettings.json`:
 }
 ```
 
-> ⚠️ Never commit your real connection string. Use `appsettings.Development.json` locally or environment variables.
-
 Run the API:
 
 ```bash
@@ -172,10 +158,8 @@ cd src/GlycemicTracker/GlycemicTracker.API
 dotnet run
 ```
 
-Backend runs at: `http://localhost:5208`  
-Swagger UI available at: `http://localhost:5208/swagger`
-
----
+- Backend runs at: `http://localhost:5208`
+- Swagger UI available at: `http://localhost:5208/swagger`
 
 ### 3. Frontend setup
 
@@ -184,9 +168,9 @@ cd src/GlycemicTracker.Frontend
 npm install
 ```
 
-Create a `.env.local` file (this is gitignored — never commit it):
+Create a `.env.local` file:
 
-```
+```plaintext
 VITE_API_URL=http://localhost:5208
 VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
@@ -202,41 +186,21 @@ Frontend runs at: `http://localhost:5173`
 
 ---
 
-### 4. Run both together
+## Database Schema
 
-Open two terminals:
-
-**Terminal 1 — Backend:**
-```bash
-cd src/GlycemicTracker/GlycemicTracker.API
-dotnet run
-```
-
-**Terminal 2 — Frontend:**
-```bash
-cd src/GlycemicTracker.Frontend
-npm run dev
-```
-
-Open your browser at `http://localhost:5173`.
-
----
-
-## 🗄 Database Schema
-
-The application uses **5 relational tables** in Supabase PostgreSQL. All computed GL fields are stamped by the backend — never trusted from client input.
+The application uses 5 relational tables in Supabase PostgreSQL. Computed GL fields are calculated by the backend.
 
 | Table | Description |
 |---|---|
-| `ingredients` | Read-only food dataset seeded from `Filipino_Foreign_Foods_Plus_StreetFoods.csv`. Supports fuzzy search on `name` and `local_name`. |
+| `ingredients` | Read-only food dataset seeded via CSV. Supports fuzzy search. |
 | `preparation_methods` | Static lookup of 13 cooking/storage methods with GI multipliers. |
-| `user_profiles` | One-to-one with Supabase Auth users. Stores daily GL target, diabetes type, timezone. |
-| `meal_entries` | Main transaction log. Stores raw inputs + 3 backend-computed GL fields per entry. |
-| `daily_gl_summaries` | Pre-aggregated daily GL totals per user. Updated via upsert on every insert/delete. |
+| `user_profiles` | Stores daily GL/GI targets, diabetes type, timezone, height, weight, and activity level. |
+| `meal_entries` | Transaction log. Stores raw inputs, backend-computed GL fields (Net Carbs, Modified GI, Final GL), and macronutrients. |
+| `daily_gl_summaries` | Pre-aggregated daily GL totals per user. Updated via upsert on log modifications. |
 
 ---
 
-## 🔌 API Endpoints
+## API Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -247,11 +211,11 @@ The application uses **5 relational tables** in Supabase PostgreSQL. All compute
 | `DELETE` | `/api/meal-entries/{id}` | Deletes an entry and updates daily GL summary |
 | `GET` | `/api/dashboard` | Returns GL ring data, stats, and today's entries |
 | `GET` | `/api/analytics` | Returns 7-day trend and monthly heatmap data |
-| `PUT` | `/api/user-profiles` | Updates display name, daily GL target, and preferences |
+| `PUT` | `/api/user-profiles` | Updates display name, targets, and bio-metrics |
 
 ---
 
-## 🧮 GL Formula
+## GL Formula
 
 ```
 Net Carbs     = (carbs_per_100g − fiber_per_100g) / 100 × grams_consumed
@@ -259,11 +223,9 @@ Modified GI   = base_gi × gi_multiplier
 Final GL      = (modified_gi × net_carbs) / 100
 ```
 
-All three values are computed **server-side** in `MealEntry.ComputeGlycemicValues()` and stored immutably on the meal entry row.
-
 ---
 
-## 🍳 Prep Method Multipliers
+## Prep Method Multipliers
 
 | Method | Multiplier | Effect |
 |---|---|---|
@@ -281,16 +243,8 @@ All three values are computed **server-side** in `MealEntry.ComputeGlycemicValue
 | Frying / Deep Fried | ×1.15 | Significant GI increase |
 | Stir-Fried | ×1.20 | Highest GI increase |
 
-> Multipliers below ×1.00 are shown in **green**. Multipliers above ×1.00 are shown in **terracotta** throughout the UI.
-
 ---
 
-## 📄 License
+## License
 
-This project was created for academic purposes as a final project submission for **COMP 018 – Web Development** at the Polytechnic University of the Philippines, June 2026.
-
----
-
-<p align="center">
-  Built with 🌿 by Group 6 — BSCS 3-1, PUP College of Computer and Information Sciences
-</p>
+This project was created for academic purposes as a final project submission for **COMP 016 – Web Development** at the Polytechnic University of the Philippines, June 2026.
