@@ -1,0 +1,6 @@
+CREATE TABLE __EFMigrationsHistory (ProductVersion character varying, MigrationId character varying);
+CREATE TABLE daily_gl_summaries (user_id uuid, date date, entry_count smallint, total_gl numeric, summary_id uuid);
+CREATE TABLE ingredients (local_name character varying, base_gi numeric, ingredient_id uuid, calories_per_100g numeric, carbs_per_100g numeric, protein_per_100g numeric, fat_per_100g numeric, fiber_per_100g numeric, created_at timestamp with time zone, name character varying);
+CREATE TABLE meal_entries (modified_gi numeric, final_gl numeric, calories_consumed numeric, logged_at timestamp with time zone, fat_consumed numeric, protein_consumed numeric, notes text, meal_type character varying, entry_id uuid, user_id uuid, ingredient_id uuid, prep_method_id smallint, grams_consumed numeric, net_carbs numeric);
+CREATE TABLE preparation_methods (prep_method_id smallint, description text, icon_key character varying, gi_multiplier numeric, method_name character varying);
+CREATE TABLE user_profiles (timezone character varying, activity_level text, created_at timestamp with time zone, height numeric, weight numeric, daily_gi_target numeric, display_name character varying, diabetes_type character varying, user_id uuid, daily_gl_target numeric);
